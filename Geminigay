@@ -1,0 +1,359 @@
+--[[
+    Murderers vs Sheriffs - Cyber White Edition (v5 Mobile Touch Button)
+    Target Executor: Delta Executor (Mobile & PC)
+    Feature Focus: Movable Draggable Menu Button Circle
+--]]
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local Workspace = game:GetService("Workspace")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+
+local LocalPlayer = Players.LocalPlayer
+local Camera = Workspace.CurrentCamera
+
+-- System States
+local Settings = {
+    AutoKill = false,
+    HitboxPro = false, HitboxSize = 25,
+    UndergroundInvis = false,
+    ESPHack = false,
+    SpeedHack = false, SpeedVal = 32,
+    FixLag1Ping = false
+}
+
+-- Parent Core Setup
+local ParentGui = (gethui and gethui()) or LocalPlayer:WaitForChild("PlayerGui")
+local OldGui = ParentGui:FindFirstChild("MvS_UltimateHub")
+if OldGui then OldGui:Destroy() end
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "MvS_UltimateHub"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = ParentGui
+
+-- Main UI Frame
+local MainFrame = Instance.new("Frame", ScreenGui)
+MainFrame.Size = UDim2.fromOffset(340, 420)
+MainFrame.Position = UDim2.new(0.5, -170, 0.5, -210)
+MainFrame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+MainFrame.BorderSizePixel = 0
+MainFrame.Visible = true
+
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 12)
+local UIStroke = Instance.new("UIStroke", MainFrame)
+UIStroke.Color = Color3.fromRGB(180, 180, 180)
+UIStroke.Thickness = 2
+
+-- Title Header
+local Title = Instance.new("TextLabel", MainFrame)
+Title.Size = UDim2.new(1, 0, 0, 45)
+Title.Text = "❖ MvS ULTIMATE HUB // WHITE VIP ❖"
+Title.TextColor3 = Color3.fromRGB(0, 0, 0)
+Title.Font = Enum.Font.SourceSansBold
+Title.TextSize = 16
+Title.BackgroundTransparency = 1
+
+local ScrollContainer = Instance.new("ScrollingFrame", MainFrame)
+ScrollContainer.Size = UDim2.new(1, -20, 1, -55)
+ScrollContainer.Position = UDim2.new(0, 10, 0, 45)
+ScrollContainer.BackgroundTransparency = 1
+ScrollContainer.CanvasSize = UDim2.new(0, 0, 1.5, 0)
+ScrollContainer.ScrollBarThickness = 3
+ScrollContainer.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100)
+
+local UIList = Instance.new("UIListLayout", ScrollContainer)
+UIList.Padding = UDim.new(0, 8)
+
+-- 1. NÚT TRÒN MENU BẬT/TẮT & DI CHUYỂN TỰ DO (FLOATING DRAGGABLE BUTTON)
+local MenuButton = Instance.new("TextButton", ScreenGui)
+MenuButton.Name = "MvS_MenuButton"
+MenuButton.Size = UDim2.fromOffset(60, 60)
+MenuButton.Position = UDim2.new(0.1, 0, 0.2, 0)
+MenuButton.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+MenuButton.Text = "MENU"
+MenuButton.TextColor3 = Color3.fromRGB(0, 0, 0)
+MenuButton.Font = Enum.Font.SourceSansBold
+MenuButton.TextSize = 14
+MenuButton.Active = true
+
+local BtnCorner = Instance.new("UICorner", MenuButton)
+BtnCorner.CornerRadius = UDim.new(1, 0) -- Biến thành hình tròn hoàn hảo
+
+local BtnStroke = Instance.new("UIStroke", MenuButton)
+BtnStroke.Color = Color3.fromRGB(0, 0, 0)
+BtnStroke.Thickness = 2
+
+-- Cơ chế Drag & Drop cho Nút Tròn
+local dragging = false
+local dragInput, dragStart, startPos
+
+local function update(input)
+    local delta = input.Position - dragStart
+    MenuButton.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+end
+
+MenuButton.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = MenuButton.Position
+
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+MenuButton.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        update(input)
+    end
+end)
+
+-- Bấm vào Nút Tròn để Ẩn/Hiện Menu
+MenuButton.MouseButton1Click:Connect(function()
+    MainFrame.Visible = not MainFrame.Visible
+end)
+
+-- Helper Functions
+local function createToggle(name, defaultState, callback)
+    local btn = Instance.new("TextButton", ScrollContainer)
+    btn.Size = UDim2.new(0.98, 0, 0, 38)
+    btn.BackgroundColor3 = Color3.fromRGB(240, 240, 240)
+    btn.Text = "  " .. name
+    btn.TextColor3 = Color3.fromRGB(0, 0, 0)
+    btn.Font = Enum.Font.SourceSansBold
+    btn.TextSize = 13
+    btn.TextXAlignment = Enum.TextXAlignment.Left
+
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+
+    local statusBox = Instance.new("Frame", btn)
+    statusBox.Size = UDim2.fromOffset(45, 22)
+    statusBox.Position = UDim2.new(1, -52, 0.5, -11)
+    statusBox.BackgroundColor3 = defaultState and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(180, 180, 180)
+    
+    Instance.new("UICorner", statusBox).CornerRadius = UDim.new(0, 10)
+
+    local statusText = Instance.new("TextLabel", statusBox)
+    statusText.Size = UDim2.new(1, 0, 1, 0)
+    statusText.Text = defaultState and "BẬT" or "TẮT"
+    statusText.TextColor3 = Color3.fromRGB(255, 255, 255)
+    statusText.Font = Enum.Font.SourceSansBold
+    statusText.TextSize = 11
+    statusText.BackgroundTransparency = 1
+
+    local state = defaultState
+    btn.MouseButton1Click:Connect(function()
+        state = not state
+        statusBox.BackgroundColor3 = state and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(180, 180, 180)
+        statusText.Text = state and "BẬT" or "TẮT"
+        callback(state)
+    end)
+end
+
+local function createInput(placeholder, callback)
+    local box = Instance.new("TextBox", ScrollContainer)
+    box.Size = UDim2.new(0.98, 0, 0, 34)
+    box.PlaceholderText = placeholder
+    box.Text = ""
+    box.BackgroundColor3 = Color3.fromRGB(245, 245, 245)
+    box.TextColor3 = Color3.fromRGB(0, 0, 0)
+    box.PlaceholderColor3 = Color3.fromRGB(120, 120, 120)
+    box.Font = Enum.Font.SourceSansBold
+    box.TextSize = 12
+    
+    Instance.new("UICorner", box).CornerRadius = UDim.new(0, 6)
+    local stroke = Instance.new("UIStroke", box)
+    stroke.Color = Color3.fromRGB(210, 210, 210)
+    
+    box.FocusLost:Connect(function() callback(box.Text) end)
+end
+
+-- Teammate Check Engine
+local function isTeammate(player)
+    if player == LocalPlayer then return true end
+    if LocalPlayer.Team and player.Team and LocalPlayer.Team == player.Team then
+        return true
+    end
+    if player.TeamColor == LocalPlayer.TeamColor then
+        return true
+    end
+    return false
+end
+
+-- 1. AUTO KILL TELEPORT
+createToggle("1. Auto Kill Teleport", false, function(v) Settings.AutoKill = v end)
+
+task.spawn(function()
+    while true do
+        if Settings.AutoKill then
+            pcall(function()
+                local char = LocalPlayer.Character
+                local root = char and char:FindFirstChild("HumanoidRootPart")
+                if char and root then
+                    local tool = char:FindFirstChildOfClass("Tool")
+                    if not tool then
+                        local bTool = LocalPlayer.Backpack:FindFirstChildOfClass("Tool")
+                        if bTool then bTool.Parent = char; tool = bTool end
+                    end
+
+                    for _, target in ipairs(Players:GetPlayers()) do
+                        if not isTeammate(target) then
+                            local tChar = target.Character
+                            local tRoot = tChar and tChar:FindFirstChild("HumanoidRootPart")
+                            local tHum = tChar and tChar:FindFirstChildOfClass("Humanoid")
+
+                            if tRoot and tHum and tHum.Health > 0 then
+                                root.CFrame = tRoot.CFrame * CFrame.new(0, 0, 1.2)
+                                if tool then tool:Activate() end
+                                VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0)
+                                task.wait(0.001)
+                                VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+                            end
+                        end
+                    end
+                end
+            end)
+            task.wait(0.01)
+        else
+            task.wait(0.2)
+        end
+    end
+end)
+
+-- 2. HITBOX PRO VÔ HẠN
+createToggle("2. Hitbox Pro Anti-Lag", false, function(v) Settings.HitboxPro = v end)
+createInput("Nhập kích thước Hitbox (Mặc định: 25)...", function(text)
+    local val = tonumber(text)
+    if val then Settings.HitboxSize = val end
+end)
+
+RunService.RenderStepped:Connect(function()
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character then
+            local pChar = player.Character
+            local tRoot = pChar:FindFirstChild("HumanoidRootPart")
+            local pHum = pChar:FindFirstChildOfClass("Humanoid")
+
+            if tRoot and pHum then
+                local box = tRoot:FindFirstChild("ProHitboxOutline")
+                if Settings.HitboxPro and pHum.Health > 0 then
+                    if isTeammate(player) then
+                        tRoot.Size = Vector3.new(2, 2, 1)
+                        if not box then
+                            box = Instance.new("SelectionBox")
+                            box.Name = "ProHitboxOutline"
+                            box.Adornee = tRoot
+                            box.Parent = tRoot
+                        end
+                        box.Color3 = Color3.fromRGB(0, 255, 100)
+                    else
+                        tRoot.Size = Vector3.new(Settings.HitboxSize, Settings.HitboxSize, Settings.HitboxSize)
+                        tRoot.Transparency = 0.8
+                        tRoot.CanCollide = false
+
+                        if not box then
+                            box = Instance.new("SelectionBox")
+                            box.Name = "ProHitboxOutline"
+                            box.Adornee = tRoot
+                            box.Parent = tRoot
+                        end
+
+                        if pHum.Health < pHum.MaxHealth then
+                            box.Color3 = Color3.fromRGB(255, 0, 0)
+                        else
+                            box.Color3 = Color3.fromRGB(255, 170, 0)
+                        end
+                    end
+                else
+                    tRoot.Size = Vector3.new(2, 2, 1)
+                    tRoot.Transparency = 1
+                    if box then box:Destroy() end
+                end
+            end
+        end
+    end
+end)
+
+-- 3. UNDERGROUND INVIS
+createToggle("3. Underground Invis (Cam Trên Đất)", false, function(v) Settings.UndergroundInvis = v end)
+
+local camOffset = Vector3.new(0, 50, 0)
+RunService.RenderStepped:Connect(function()
+    if Settings.UndergroundInvis then
+        local char = LocalPlayer.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            hrp.CFrame = CFrame.new(hrp.Position.X, -50, hrp.Position.Z)
+            Camera.CFrame = Camera.CFrame + camOffset
+        end
+    end
+end)
+
+-- 4. ESP WALLHACK HIGHLIGHT
+createToggle("4. ESP Wallhack X-Ray", false, function(v) Settings.ESPHack = v end)
+
+RunService.RenderStepped:Connect(function()
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character then
+            local pChar = player.Character
+            local hl = pChar:FindFirstChild("MvS_ESP")
+            
+            if Settings.ESPHack then
+                if not hl then
+                    hl = Instance.new("Highlight")
+                    hl.Name = "MvS_ESP"
+                    hl.Parent = pChar
+                end
+                if isTeammate(player) then
+                    hl.FillColor = Color3.fromRGB(0, 255, 100)
+                else
+                    hl.FillColor = Color3.fromRGB(255, 0, 0)
+                end
+            else
+                if hl then hl:Destroy() end
+            end
+        end
+    end
+end)
+
+-- 5. HACK TỐC ĐỘ DI CHUYỂN
+createToggle("5. Tốc Độ Di Chuyển Boost", false, function(v) Settings.SpeedHack = v end)
+createInput("Nhập tốc độ chạy (Mặc định: 32)...", function(text)
+    local val = tonumber(text)
+    if val then Settings.SpeedVal = val end
+end)
+
+RunService.RenderStepped:Connect(function()
+    if Settings.SpeedHack then
+        local char = LocalPlayer.Character
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+        if hum then
+            hum.WalkSpeed = Settings.SpeedVal
+        end
+    end
+end)
+
+-- 6. AUTO 1 PING FIX LAG 240HZ
+createToggle("6. Auto 1 Ping Fix Lag (240Hz)", false, function(v)
+    Settings.FixLag1Ping = v
+    if setfpscap then setfpscap(v and 240 or 60) end
+    if v then
+        for _, item in ipairs(Workspace:GetDescendants()) do
+            if item:IsA("BasePart") then item.Material = Enum.Material.SmoothPlastic end
+            if item:IsA("ParticleEmitter") or item:IsA("Trail") then item.Enabled = false end
+        end
+        settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+    end
+end)
